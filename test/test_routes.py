@@ -40,16 +40,31 @@ def JSONRPCRequest(method, params=None):
         "method": method,
         "params": params,
     }
-    
+
+
 def valid_task_create_payload(user_id):
     return st.fixed_dictionaries(
         {
             "user_id": st.just(user_id),
             "title": st.text(),
             "description": st.text(),
-            "due_time" : st.just(datetime.datetime.now().isoformat() + "Z")
+            "due_time": st.just(datetime.datetime.now().isoformat() + "Z"),
         }
     )
+
+
+def valid_task_update_payload(user_id, target_id):
+    return st.fixed_dictionaries(
+        {
+            "target_id": st.just(target_id),
+            "user_id": st.just(user_id),
+            "title": st.text(),
+            "description": st.text(),
+            "due_time": st.just(datetime.datetime.now().isoformat() + "Z"),
+            "completion_time": st.just(datetime.datetime.now().isoformat() + "Z"),
+        }
+    )
+
 
 def test_index(client):
     response = client.get("/", follow_redirects=True)
@@ -59,6 +74,7 @@ def test_index(client):
 def test_404(client):
     response = client.get("/404", follow_redirects=True)
     assert 404 == response.status_code
+
 
 @given(st.data())
 def test_create(client, data):
@@ -72,6 +88,7 @@ def test_create(client, data):
     assert request_params["title"] == result_payload["title"]
     assert request_params["description"] == result_payload["description"]
 
+
 @given(st.data())
 def test_read(client, data):
     request_params = data.draw(valid_task_create_payload(1))
@@ -84,7 +101,8 @@ def test_read(client, data):
     assert request_params["title"] == result_payload["title"]
     assert request_params["description"] == result_payload["description"]
     assert request_params["due_time"] == result_payload["due_time"]
-    
+    assert not result_payload["completion_time"]
+
     target_id = result_payload["id"]
 
     request_payload = JSONRPCRequest("task.read", {"target_id": target_id})
@@ -96,15 +114,12 @@ def test_read(client, data):
     assert request_params["title"] == result_payload["title"]
     assert request_params["description"] == result_payload["description"]
     assert request_params["due_time"] == result_payload["due_time"]
-    
+    assert not result_payload["completion_time"]
 
 
-def test_read_all(client):
-    request_params = {
-        "user_id": 1,
-        "title": "test title",
-        "description": "test description",
-    }
+@given(st.data())
+def test_read_all(client, data):
+    request_params = data.draw(valid_task_create_payload(1))
     request_payload = JSONRPCRequest("task.create", request_params)
 
     response = client.post("/rpc", json=request_payload)
@@ -119,15 +134,11 @@ def test_read_all(client):
     response = client.post("/rpc", json=request_payload)
     assert 200 == response.status_code
     result_payload = response.json["result"]
-    assert 1 == len(result_payload)
 
 
-def test_update(client):
-    request_params = {
-        "user_id": 1,
-        "title": "test title",
-        "description": "test description",
-    }
+@given(st.data())
+def test_update(client, data):
+    request_params = data.draw(valid_task_create_payload(1))
     request_payload = JSONRPCRequest("task.create", request_params)
 
     response = client.post("/rpc", json=request_payload)
@@ -138,14 +149,7 @@ def test_update(client):
     assert request_params["description"] == result_payload["description"]
     target_id = result_payload["id"]
 
-    request_params = {
-        "user_id": 1,
-        "title": "test title 2",
-        "description": "test description 2",
-        "due_time": datetime.datetime.now().isoformat() + "Z",
-        "completion_time": datetime.datetime.now().isoformat() + "Z",
-        "target_id": target_id,
-    }
+    request_params = data.draw(valid_task_update_payload(1, target_id=target_id))
     request_payload = JSONRPCRequest("task.update", request_params)
 
     response = client.post("/rpc", json=request_payload)
@@ -154,4 +158,7 @@ def test_update(client):
     assert request_params["user_id"] == result_payload["user_id"]
     assert request_params["title"] == result_payload["title"]
     assert request_params["description"] == result_payload["description"]
+    assert request_params["due_time"] == result_payload["due_time"]
+    assert request_params["completion_time"] == result_payload["completion_time"]
+
     assert target_id == result_payload["id"]

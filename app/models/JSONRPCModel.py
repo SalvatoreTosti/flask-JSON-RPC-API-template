@@ -1,6 +1,7 @@
 from app import db
 from abc import ABC, abstractmethod
 import datetime
+from app.rpc import JSONRPC
 
 
 class JSONRPCModel(ABC):
@@ -54,7 +55,7 @@ class JSONRPCModel(ABC):
 
         for required_param in required_params:
             if required_param not in params:
-                raise JSONRPC.InvalidRequestException()
+                raise JSONRPC.JSONRPC.InvalidRequestException()
 
         _all_params = []
         _all_params.extend(required_params)
@@ -130,7 +131,7 @@ class JSONRPCModel(ABC):
         updates = self._transform_parameters(
             dictionary, self._generate_transform_dict(self._update_parameters())
         )
-
+        print(updates)
         for k, v in updates.items():
             setattr(self, k, v)
         db.session.add(self)

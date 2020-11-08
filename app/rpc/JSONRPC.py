@@ -7,11 +7,7 @@ from app.models.task import Task
 # Add support for Notifications (requests without ids)
 @app.route("/rpc", methods=["POST"])
 def rpc():
-    dispatcher = JSONRPCDispatcher(
-        [TestModel(), Task()]
-        # User(),
-        # Event()
-    )
+    dispatcher = JSONRPCDispatcher([TestModel(), Task()])
     return jsonify(dispatcher.evaluate(request.json))
 
 
@@ -93,8 +89,6 @@ class JSONRPC:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.INVALID_PARAMS)
             except JSONRPC.InternalErrorException:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.INTERNAL_ERROR)
-            # except:
-            #     return JSONRPC.error(JSONRPC.RPC_ERROR.INTERNAL_ERROR)
 
         return decorated_function
 

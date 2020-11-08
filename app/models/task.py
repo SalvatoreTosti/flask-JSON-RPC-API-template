@@ -28,8 +28,12 @@ class Task(db.Model, JSONRPCModel, metaclass=RPCModelMeta):
                 "title": None,
                 "description": None,
                 "due_time": JSONRPCTools.from_iso_str,
+                "completion_time": JSONRPCTools.from_iso_str,
             },
         }
 
     def transform_json_values(self):
-        return {"due_time": JSONRPCTools.to_iso_str}
+        return {
+            "due_time": JSONRPCTools.to_iso_str,
+            "completion_time": JSONRPCTools.to_iso_str,
+        }
