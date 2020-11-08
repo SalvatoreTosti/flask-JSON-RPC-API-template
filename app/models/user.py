@@ -7,12 +7,13 @@ from itsdangerous import (
     SignatureExpired,
 )
 
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True)
     email = db.Column(db.String(120), index=True, unique=True)
     password_hash = db.Column(db.String(128))
-    
+
     def set_username(self, username):
         if type(username) is not str:
             return
@@ -24,20 +25,20 @@ class User(UserMixin, db.Model):
 
     def set_email(self, email):
         self.email = email
-    
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-    
+
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-     
+
     @login.user_loader
     def load_user(id):
-        return User.query.get(int(id))    
-    
+        return User.query.get(int(id))
+
     def __repr__(self):
-        return '<User {}>'.format(self.username)
-        
+        return "<User {}>".format(self.username)
+
     def delete(self):
         db.session.delete(self)
         db.session.commit()
@@ -59,11 +60,7 @@ class User(UserMixin, db.Model):
         return user
 
     def to_json(self):
-        return {
-            "id": self.id,
-            "username": self.username,
-            "email": self.email
-        }
+        return {"id": self.id, "username": self.username, "email": self.email}
 
     @staticmethod
     def make_user(username, password):

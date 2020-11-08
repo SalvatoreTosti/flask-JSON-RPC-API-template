@@ -33,6 +33,7 @@ def get_auth_token():
     token = current_user.generate_auth_token()
     return jsonify({"token": token.decode("ascii")})
 
+
 @app.route(base_url + "/generate-token")
 @auth.login_required
 def generate_auth_token():
