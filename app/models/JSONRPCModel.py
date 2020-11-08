@@ -2,6 +2,7 @@ from app import db
 from abc import ABC, abstractmethod
 import datetime
 
+
 class JSONRPCModel(ABC):
     def _crud_dispaches(self):
         self.add_dispatch("create", self._rpc_create)
@@ -12,7 +13,7 @@ class JSONRPCModel(ABC):
 
     def __repr__(self):
         return f"<{type(self)} {self.id}>, endpoint: {self._rpc_model_base()}"
-    
+
     # Optional override to apply transformations to output values (eg. datetimes)
     def transform_json_values(self):
         return {}
@@ -28,8 +29,7 @@ class JSONRPCModel(ABC):
             ):
                 x[k] = v
 
-        x = self._transform_parameters(x, self.transform_json_values())
-        return x
+        return self._transform_parameters(x, self.transform_json_values())
 
     def _rpc_model_base(self):
         return type(self).__name__.lower()
@@ -45,17 +45,17 @@ class JSONRPCModel(ABC):
     def _validate_params(self, params=None, required_params=None, optional_params=None):
         if not params:
             params = {}
-        
+
         if not required_params:
             required_params = []
-        
+
         if not optional_params:
             optional_params = []
-        
+
         for required_param in required_params:
             if required_param not in params:
                 raise JSONRPC.InvalidRequestException()
-        
+
         _all_params = []
         _all_params.extend(required_params)
         _all_params.extend(optional_params)
@@ -63,7 +63,7 @@ class JSONRPCModel(ABC):
         for k, v in params.items():
             if k in _all_params:
                 valid_params[k] = v
-                
+
         return valid_params
 
     @classmethod
@@ -82,7 +82,7 @@ class JSONRPCModel(ABC):
 
     def _rpc_read_all(self, params):
         return [target.to_json() for target in self.read_all()]
-    
+
     def _transform_parameters(self, params, transformation_dict):
         for k, v in params.items():
             if k in transformation_dict.keys():
@@ -94,24 +94,22 @@ class JSONRPCModel(ABC):
         all_params = {}
         all_params.update(parameter_description_dict.get("required", {}))
         all_params.update(parameter_description_dict.get("optional", {}))
-        
+
         valid_transformations = {}
         for k, v in all_params.items():
             if v:
                 valid_transformations[k] = v
         return valid_transformations
-    
+
     @abstractmethod
     def _create_parameters(self):
         ...
-        
+
     def create(self, dictionary):
         dictionary = self._transform_parameters(
-            dictionary, 
-            self._generate_transform_dict(self._create_parameters()))
-        target = type(self)(
-            **dictionary
+            dictionary, self._generate_transform_dict(self._create_parameters())
         )
+        target = type(self)(**dictionary)
         db.session.add(target)
         db.session.commit()
         return target
@@ -120,19 +118,20 @@ class JSONRPCModel(ABC):
         params = self._validate_params(
             params,
             self._create_parameters().get("required").keys(),
-            self._create_parameters().get("optional").keys())
+            self._create_parameters().get("optional").keys(),
+        )
         return self.create(params).to_json()
-    
+
     @abstractmethod
     def _update_parameters(self):
         ...
-  
+
     def update(self, dictionary):
         updates = self._transform_parameters(
-            dictionary, 
-            self._generate_transform_dict(self._update_parameters()))
-            
-        for k,v in updates.items():
+            dictionary, self._generate_transform_dict(self._update_parameters())
+        )
+
+        for k, v in updates.items():
             setattr(self, k, v)
         db.session.add(self)
         db.session.commit()
@@ -141,7 +140,8 @@ class JSONRPCModel(ABC):
         params = self._validate_params(
             params,
             self._update_parameters().get("required").keys(),
-            self._update_parameters().get("optional").keys())
+            self._update_parameters().get("optional").keys(),
+        )
         target = self.read(params["target_id"])
         target.update(params)
         return target.to_json()
@@ -159,19 +159,20 @@ class JSONRPCModel(ABC):
             return {}
         return target.delete()
 
-class JSONRPCTools:
 
+class JSONRPCTools:
     @staticmethod
     def from_iso_str(value):
         if value:
             return datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
         return value
-        
+
     @staticmethod
     def to_iso_str(value):
         if value:
-            return value.isoformat()+'Z'
+            return value.isoformat() + "Z"
         return value
-        
+
+
 class RPCModelMeta(type(JSONRPCModel), type(db.Model)):
     ...
