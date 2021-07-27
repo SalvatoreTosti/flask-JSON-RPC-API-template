@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import datetime
 from app.rpc.JSONRPCExceptions import InvalidRequestException
 
+
 class JSONRPCModel(ABC):
     def _crud_dispaches(self):
         self.add_dispatch("create", self._rpc_create)
@@ -84,7 +85,7 @@ class JSONRPCModel(ABC):
 
     def read_all_restrictions(self):
         return True
-    
+
     def read_all(self):
         if not self.read_all_restrictions():
             raise InvalidRequestException()
@@ -123,7 +124,7 @@ class JSONRPCModel(ABC):
         db.session.add(target)
         db.session.commit()
         return target
-    
+
     def create_restrictions(self, dictionary):
         return True
 
@@ -150,7 +151,7 @@ class JSONRPCModel(ABC):
             setattr(self, k, v)
         db.session.add(self)
         db.session.commit()
-    
+
     def update_restrictions(self, dictionary):
         return True
 
@@ -161,12 +162,12 @@ class JSONRPCModel(ABC):
             self._update_parameters().get("optional").keys(),
         )
         if not self.update_restrictions(params):
-            print('raising ex')
+            print("raising ex")
             raise InvalidRequestException()
         target = self.read(params["target_id"])
         target.update(params)
         return target.to_json()
-    
+
     def delete_restrictions(self):
         return True
 
@@ -177,7 +178,7 @@ class JSONRPCModel(ABC):
         db.session.delete(target)
         db.session.commit()
         return {}
-    
+
     def update_restrictions(self, dictionary):
         return True
 

@@ -2,7 +2,13 @@ from app import app
 from functools import wraps
 from enum import Enum
 from flask import request, jsonify  # request, url_for, g
-from app.rpc.JSONRPCExceptions import ParseErrorException, InvalidRequestException, MethodNotFoundException, InvalidParamsException, InternalErrorException
+from app.rpc.JSONRPCExceptions import (
+    ParseErrorException,
+    InvalidRequestException,
+    MethodNotFoundException,
+    InvalidParamsException,
+    InternalErrorException,
+)
 from app.models.task import Task
 
 # Add support for Notifications (requests without ids)
