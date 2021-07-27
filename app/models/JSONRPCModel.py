@@ -1,8 +1,7 @@
 from app import db
 from abc import ABC, abstractmethod
 import datetime
-from app.rpc import JSONRPC
-
+from app.rpc.JSONRPCExceptions import InvalidRequestException
 
 class JSONRPCModel(ABC):
     def _crud_dispaches(self):
@@ -55,7 +54,7 @@ class JSONRPCModel(ABC):
 
         for required_param in required_params:
             if required_param not in params:
-                raise JSONRPC.JSONRPC.InvalidRequestException()
+                raise InvalidRequestException()
 
         _all_params = []
         _all_params.extend(required_params)
@@ -71,14 +70,24 @@ class JSONRPCModel(ABC):
     def read_cls(cls, target_id):
         return cls.query.filter_by(id=target_id).first()
 
+    def read_restrictions(self):
+        return True
+
     def read(self, target_id):
+        if not self.read_restrictions():
+            raise InvalidRequestException()
         return type(self).read_cls(target_id)
 
     def _rpc_read(self, params):
         target_id = params["target_id"]
         return self.read(target_id).to_json()
 
+    def read_all_restrictions(self):
+        return True
+    
     def read_all(self):
+        if not self.read_all_restrictions():
+            raise InvalidRequestException()
         return type(self).query.all()
 
     def _rpc_read_all(self, params):
@@ -114,6 +123,9 @@ class JSONRPCModel(ABC):
         db.session.add(target)
         db.session.commit()
         return target
+    
+    def create_restrictions(self, dictionary):
+        return True
 
     def _rpc_create(self, params):
         params = self._validate_params(
@@ -121,6 +133,8 @@ class JSONRPCModel(ABC):
             self._create_parameters().get("required").keys(),
             self._create_parameters().get("optional").keys(),
         )
+        if not self.create_restrictions(params):
+            raise InvalidRequestException()
         return self.create(params).to_json()
 
     @abstractmethod
@@ -136,6 +150,9 @@ class JSONRPCModel(ABC):
             setattr(self, k, v)
         db.session.add(self)
         db.session.commit()
+    
+    def update_restrictions(self, dictionary):
+        return True
 
     def _rpc_update(self, params):
         params = self._validate_params(
@@ -143,15 +160,26 @@ class JSONRPCModel(ABC):
             self._update_parameters().get("required").keys(),
             self._update_parameters().get("optional").keys(),
         )
+        if not self.update_restrictions(params):
+            print('raising ex')
+            raise InvalidRequestException()
         target = self.read(params["target_id"])
         target.update(params)
         return target.to_json()
+    
+    def delete_restrictions(self):
+        return True
 
     # Override for specific class behavior
     def delete(self):
+        if not self.delete_restrictions():
+            raise InvalidRequestException()
         db.session.delete(target)
         db.session.commit()
         return {}
+    
+    def update_restrictions(self, dictionary):
+        return True
 
     def _rpc_delete(self, params):
         target_id = params["target_id"]
@@ -161,7 +189,7 @@ class JSONRPCModel(ABC):
         return target.delete()
 
 
-class JSONRPCTools:
+class JSONRPCUtils:
     @staticmethod
     def from_iso_str(value):
         if value:

@@ -2,6 +2,7 @@ from app import app
 from functools import wraps
 from enum import Enum
 from flask import request, jsonify  # request, url_for, g
+from app.rpc.JSONRPCExceptions import ParseErrorException, InvalidRequestException, MethodNotFoundException, InvalidParamsException, InternalErrorException
 from app.models.task import Task
 
 # Add support for Notifications (requests without ids)
@@ -22,10 +23,10 @@ class TestModel:
 class JSONRPC:
     def validate_request(request_payload):
         if request_payload.get("jsonrpc") != "2.0":
-            raise JSONRPC.InvalidRequestException()
+            raise JSONRPCExceptions.InvalidRequestException()
 
         if "id" not in request_payload:
-            raise JSONRPC.InvalidRequestException()
+            raise JSONRPCExceptions.InvalidRequestException()
 
     class ParseErrorException(Exception):
         ...
@@ -69,25 +70,22 @@ class JSONRPC:
                 "message": "Internal error",
             },
         }
-        _error = errors.get(RPC_Error)
-        if not _error:
-            return errors[INTERNAL_ERROR]
-        return _error
+        return errors.get(RPC_Error, errors[JSONRPC.RPC_ERROR.INTERNAL_ERROR])
 
     def JSONRPCExceptionToError(fn):
         @wraps(fn)
         def decorated_function(*args, **kwargs):
             try:
                 return fn(*args, **kwargs)
-            except JSONRPC.ParseErrorException:
+            except ParseErrorException:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.PARSE_ERROR)
-            except JSONRPC.InvalidRequestException:
+            except InvalidRequestException:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.INVALID_REQUEST)
-            except JSONRPC.MethodNotFoundException:
+            except MethodNotFoundException:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.METHOD_NOT_FOUND)
-            except JSONRPC.InvalidParamsException:
+            except InvalidParamsException:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.INVALID_PARAMS)
-            except JSONRPC.InternalErrorException:
+            except InternalErrorException:
                 return JSONRPC.error(JSONRPC.RPC_ERROR.INTERNAL_ERROR)
 
         return decorated_function
@@ -102,7 +100,7 @@ class JSONRPCDispatcher:
     def dispatch(self, method, params):
         fn = self._dispatch_dict.get(method)
         if not fn:
-            raise JSONRPC.MethodNotFoundException()
+            raise JSONRPCExceptions.MethodNotFoundException()
         return fn(params)
 
     @JSONRPC.JSONRPCExceptionToError
